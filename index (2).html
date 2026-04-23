@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Real Estate AI Voice Qualification — n8n Workflow</title>
+<meta name="description" content="Automatically calls leads, qualifies them with AI, scores them Hot/Warm/Cold, and alerts your agent — fully automated n8n workflow.">
+<meta property="og:title" content="Real Estate AI Voice Qualification — n8n Workflow">
+<meta property="og:description" content="Automated outbound AI voice calling with Vapi/Bland AI, GPT-4o scoring, Twilio SMS, and Google Sheets logging.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #060E1E;
+    --navy2:  #0C1A35;
+    --blue:   #1A56FF;
+    --blue2:  #3B7BFF;
+    --cyan:   #00D2FF;
+    --teal:   #00C9A7;
+    --gold:   #F5A623;
+    --red:    #FF4D6D;
+    --purple: #8B5CF6;
+    --text:   #E8EDF8;
+    --muted:  #7A8AAA;
+    --card:   rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --glow:   rgba(26,86,255,0.3);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--navy);
+    color: var(--text);
+    font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND GRID ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(26,86,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,86,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── GLOW ORBS ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+  .orb1 { width: 600px; height: 600px; top: -200px; left: -200px; background: rgba(26,86,255,0.12); }
+  .orb2 { width: 500px; height: 500px; bottom: -150px; right: -100px; background: rgba(0,201,167,0.09); animation-delay: -6s; }
+  .orb3 { width: 400px; height: 400px; top: 50%; left: 50%; background: rgba(139,92,246,0.06); animation-delay: -12s; }
+  @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(40px, 30px) scale(1.08); } }
+
+  /* ── LAYOUT ── */
+  .page { position: relative; z-index: 1; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 100px 0 72px;
+    text-align: center;
+    position: relative;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(26,86,255,0.15);
+    border: 1px solid rgba(26,86,255,0.4);
+    border-radius: 100px;
+    padding: 6px 18px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--cyan);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    animation: fadeDown 0.7s ease both;
+  }
+  .hero-badge::before { content: ''; width: 6px; height: 6px; background: var(--cyan); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+    animation: fadeDown 0.7s 0.1s ease both;
+  }
+  .hero h1 span { color: var(--blue2); }
+  .hero h1 .accent { 
+    background: linear-gradient(135deg, var(--cyan), var(--blue2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 600px;
+    margin: 0 auto 44px;
+    font-weight: 300;
+    animation: fadeDown 0.7s 0.2s ease both;
+  }
+
+  .tech-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 60px;
+    animation: fadeDown 0.7s 0.3s ease both;
+  }
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    transition: all 0.25s;
+  }
+  .pill:hover { border-color: var(--blue2); background: rgba(26,86,255,0.1); transform: translateY(-2px); }
+  .pill-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  .stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    animation: fadeDown 0.7s 0.4s ease both;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+  .stat { text-align: center; }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; color: var(--cyan); }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  @keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── SECTION TITLES ── */
+  .section { padding: 80px 0; }
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--blue2);
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(24px, 4vw, 38px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 14px;
+  }
+  .section-desc { color: var(--muted); max-width: 560px; font-size: 15px; }
+
+  /* ── WORKFLOW VISUAL ── */
+  .workflow-section { padding: 80px 0; }
+  .workflow-title-row {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+
+  .flow-grid {
+    display: grid;
+    gap: 0;
+  }
+
+  /* Each step row */
+  .flow-row {
+    display: grid;
+    grid-template-columns: 1fr 64px 1fr;
+    align-items: stretch;
+    min-height: 90px;
+    opacity: 1;
+    transform: translateY(0);
+    animation: fadeUp 0.5s ease both;
+  }
+  .flow-row.visible { opacity: 1; transform: translateY(0); }
+
+  /* Connector column */
+  .flow-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .flow-connector .line {
+    width: 2px;
+    flex: 1;
+    background: linear-gradient(to bottom, rgba(26,86,255,0.3), rgba(26,86,255,0.6));
+  }
+  .flow-connector .node-dot {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--blue);
+    background: var(--navy2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--cyan);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 0 6px rgba(26,86,255,0.08), 0 0 20px rgba(26,86,255,0.2);
+  }
+  .flow-connector .node-dot.hot { border-color: var(--red); color: var(--red); box-shadow: 0 0 0 6px rgba(255,77,109,0.08), 0 0 20px rgba(255,77,109,0.2); }
+  .flow-connector .node-dot.done { border-color: var(--teal); color: var(--teal); box-shadow: 0 0 0 6px rgba(0,201,167,0.08), 0 0 20px rgba(0,201,167,0.2); }
+
+  /* Left node card */
+  .flow-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin: 10px 0;
+    transition: all 0.25s;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+  .flow-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--blue2), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .flow-card:hover { border-color: rgba(26,86,255,0.4); background: rgba(26,86,255,0.07); transform: translateX(-4px); }
+  .flow-card:hover::before { opacity: 1; }
+  .flow-card.right:hover { transform: translateX(4px); }
+
+  /* Empty side */
+  .flow-empty { display: flex; align-items: center; }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .card-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .card-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .card-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+  .card-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .card-tag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+  }
+
+  /* ── SPLIT ARROW ── */
+  .flow-split {
+    display: grid;
+    grid-template-columns: 1fr 64px 1fr;
+    gap: 0;
+    margin: 4px 0;
+  }
+  .split-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    padding: 4px 0;
+  }
+  .split-arrow .hot-badge { color: var(--red); }
+  .split-arrow .warm-badge { color: var(--gold); }
+
+  /* ── PARALLEL CARDS ── */
+  .parallel-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 12px 0;
+    opacity: 1;
+    transform: translateY(0);
+    animation: fadeUp 0.5s ease both;
+  }
+  .parallel-row.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── CONFIG TABLE SECTION ── */
+  .config-section { padding: 80px 0; }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
+
+  .config-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.25s;
+  }
+  .config-card:hover { border-color: rgba(26,86,255,0.3); }
+  .config-card-header {
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .config-card-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .config-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; }
+  .config-card-sub { font-size: 12px; color: var(--muted); }
+
+  .config-rows { padding: 10px 0; }
+  .config-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 9px 22px;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 13px;
+  }
+  .config-row:last-child { border-bottom: none; }
+  .config-key { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .config-val { color: var(--text); word-break: break-all; }
+  .config-val.code { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--cyan); }
+  .config-val.green { color: var(--teal); }
+  .config-val.gold { color: var(--gold); }
+
+  /* ── PROMPT BOX ── */
+  .prompt-section { padding: 80px 0; }
+  .prompt-box {
+    background: var(--navy2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 40px;
+  }
+  .prompt-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .prompt-dots { display: flex; gap: 6px; }
+  .prompt-dots span { width: 11px; height: 11px; border-radius: 50%; }
+  .d1 { background: #FF5F57; }
+  .d2 { background: #FFBD2E; }
+  .d3 { background: #28CA41; }
+  .prompt-filename { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); margin-left: 8px; }
+  .prompt-body { padding: 28px; font-family: 'DM Mono', monospace; font-size: 13px; line-height: 1.9; color: #A8B8D0; white-space: pre-wrap; }
+  .prompt-body .kw { color: var(--cyan); }
+  .prompt-body .str { color: #A8FF78; }
+  .prompt-body .comment { color: #4A5A6A; }
+  .prompt-body .num { color: var(--gold); }
+
+  /* ── SHEETS SCHEMA ── */
+  .sheets-section { padding: 80px 0; }
+  .schema-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 32px;
+    font-size: 13px;
+  }
+  .schema-table thead tr { background: rgba(26,86,255,0.15); }
+  .schema-table th { padding: 14px 18px; text-align: left; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue2); border-bottom: 1px solid var(--border); }
+  .schema-table td { padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .schema-table tr:hover td { background: rgba(26,86,255,0.04); }
+  .col-letter { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+  .col-name { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--cyan); }
+  .status-badge { display: inline-block; padding: 2px 10px; border-radius: 100px; font-size: 11px; font-family: 'DM Mono', monospace; }
+  .sb-auto { background: rgba(139,92,246,0.2); color: #C4B5FD; }
+  .sb-manual { background: rgba(0,201,167,0.15); color: var(--teal); }
+
+  /* ── COST TABLE ── */
+  .cost-section { padding: 80px 0; }
+  .cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; }
+  .cost-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+    transition: all 0.25s;
+  }
+  .cost-card:hover { transform: translateY(-4px); border-color: rgba(26,86,255,0.3); }
+  .cost-icon { font-size: 28px; margin-bottom: 12px; }
+  .cost-service { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .cost-price { font-family: 'DM Mono', monospace; font-size: 22px; color: var(--cyan); font-weight: 500; margin-bottom: 4px; }
+  .cost-unit { font-size: 12px; color: var(--muted); }
+  .cost-total {
+    background: linear-gradient(135deg, rgba(26,86,255,0.15), rgba(0,201,167,0.1));
+    border: 1px solid rgba(26,86,255,0.3);
+    border-radius: 16px;
+    padding: 32px;
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cost-total-label { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .cost-total-val { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: var(--cyan); }
+
+  /* ── CHECKLIST ── */
+  .checklist-section { padding: 80px 0; }
+  .checklist {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 40px;
+  }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    transition: all 0.2s;
+  }
+  .check-item:hover { border-color: rgba(0,201,167,0.3); background: rgba(0,201,167,0.04); }
+  .check-box {
+    width: 22px; height: 22px;
+    border: 2px solid var(--teal);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-size: 12px;
+    color: var(--teal);
+  }
+  .check-text { font-size: 14px; color: var(--text); line-height: 1.5; }
+  .check-text strong { font-weight: 600; display: block; margin-bottom: 2px; }
+  .check-text span { color: var(--muted); font-size: 12px; }
+
+  /* ── FOOTER ── */
+  .footer {
+    padding: 60px 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+  .footer-logo { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 12px; }
+  .footer-logo span { color: var(--cyan); }
+  .footer-text { color: var(--muted); font-size: 14px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .config-grid { grid-template-columns: 1fr; }
+    .cost-grid { grid-template-columns: 1fr 1fr; }
+    .checklist { grid-template-columns: 1fr; }
+    .stats-row { gap: 24px; }
+    .flow-row { grid-template-columns: 64px 1fr; }
+    .flow-empty { display: none; }
+    .parallel-row { grid-template-columns: 1fr; }
+  }
+
+  /* ── DIVIDER ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="page">
+
+<!-- ══════════════════════════════════ HERO ══════════════════════════════════ -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">n8n Automation Template · Real Estate</div>
+    <h1>Outbound <span class="accent">AI Voice</span><br>Lead Qualification</h1>
+    <p class="hero-sub">Automatically calls your leads, qualifies them with a conversational AI agent, scores them Hot / Warm / Cold, and alerts your agent — all without manual work.</p>
+
+    <div class="tech-pills">
+      <div class="pill"><span class="pill-dot" style="background:#7C3AED"></span>Vapi AI</div>
+      <div class="pill"><span class="pill-dot" style="background:#2563EB"></span>Bland AI</div>
+      <div class="pill"><span class="pill-dot" style="background:#E53E3E"></span>Twilio</div>
+      <div class="pill"><span class="pill-dot" style="background:#059669"></span>ElevenLabs</div>
+      <div class="pill"><span class="pill-dot" style="background:#D97706"></span>OpenAI GPT-4o</div>
+      <div class="pill"><span class="pill-dot" style="background:#1565C0"></span>Google Sheets</div>
+      <div class="pill"><span class="pill-dot" style="background:#0D47A1"></span>n8n</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="stat-val">20+</div><div class="stat-label">Pre-built Nodes</div></div>
+      <div class="stat"><div class="stat-val">100%</div><div class="stat-label">Automated</div></div>
+      <div class="stat"><div class="stat-val">&lt;30s</div><div class="stat-label">First Call Out</div></div>
+      <div class="stat"><div class="stat-val">~$85</div><div class="stat-label">Est. Monthly Cost</div></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════════ WORKFLOW VISUAL ════════════════════════ -->
+<section class="workflow-section">
+  <div class="container">
+    <div class="workflow-title-row">
+      <div class="section-label">Workflow Architecture</div>
+      <h2 class="section-title">Node-by-Node Flow</h2>
+      <p class="section-desc" style="margin:0 auto;">Every step in the pipeline, from trigger to lead scoring — all runs automatically inside n8n.</p>
+    </div>
+
+    <div class="flow-grid" id="flowGrid">
+
+      <!-- STEP 1: TRIGGER -->
+      <div class="flow-row">
+        <div class="flow-card">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(139,92,246,0.15)">⏰</div>
+            <div>
+              <div class="card-type">Schedule Trigger</div>
+              <div class="card-name">Daily Trigger</div>
+            </div>
+          </div>
+          <div class="card-desc">Fires every weekday at 9:00 AM EST. Use Manual Trigger during testing.</div>
+          <span class="card-tag" style="background:rgba(139,92,246,0.15);color:#C4B5FD;">n8n-nodes-base.scheduleTrigger</span>
+        </div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot">01</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-empty"></div>
+      </div>
+
+      <!-- STEP 2: READ SHEETS -->
+      <div class="flow-row">
+        <div class="flow-empty"></div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot">02</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-card right">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(16,185,129,0.15)">📊</div>
+            <div>
+              <div class="card-type">Google Sheets</div>
+              <div class="card-name">Read Leads</div>
+            </div>
+          </div>
+          <div class="card-desc">Reads all rows where <code style="color:var(--cyan);font-family:'DM Mono',monospace;font-size:12px">status = "New"</code> from your Leads tab.</div>
+          <span class="card-tag" style="background:rgba(16,185,129,0.12);color:var(--teal);">Filter: status = New</span>
+        </div>
+      </div>
+
+      <!-- STEP 3: SPLIT -->
+      <div class="flow-row">
+        <div class="flow-card">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(245,166,35,0.15)">⚡</div>
+            <div>
+              <div class="card-type">Split In Batches</div>
+              <div class="card-name">Process One by One</div>
+            </div>
+          </div>
+          <div class="card-desc">Splits the leads array and processes each lead individually through the pipeline. Batch size: 1.</div>
+          <span class="card-tag" style="background:rgba(245,166,35,0.12);color:var(--gold);">Batch Size: 1</span>
+        </div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot">03</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-empty"></div>
+      </div>
+
+      <!-- STEP 4: FILTER -->
+      <div class="flow-row">
+        <div class="flow-empty"></div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot">04</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-card right">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(239,68,68,0.15)">🔍</div>
+            <div>
+              <div class="card-type">IF Node</div>
+              <div class="card-name">Filter: Has Phone</div>
+            </div>
+          </div>
+          <div class="card-desc">Checks the lead has a valid phone number in E.164 format (+1...) AND status is still "New".</div>
+          <span class="card-tag" style="background:rgba(239,68,68,0.12);color:#FCA5A5;">phone not empty AND status = New</span>
+        </div>
+      </div>
+
+      <!-- STEP 5: CALL -->
+      <div class="flow-row">
+        <div class="flow-card">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(124,58,237,0.15)">📞</div>
+            <div>
+              <div class="card-type">HTTP Request</div>
+              <div class="card-name">Initiate AI Call</div>
+            </div>
+          </div>
+          <div class="card-desc">Sends a POST request to <strong>Vapi AI</strong> or <strong>Bland AI</strong> to initiate the outbound call with your configured assistant.</div>
+          <span class="card-tag" style="background:rgba(124,58,237,0.15);color:#C4B5FD;">POST /call/phone · Vapi or Bland AI</span>
+        </div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot">05</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-empty"></div>
+      </div>
+
+      <!-- STEP 6: LOG CALL -->
+      <div class="flow-row">
+        <div class="flow-empty"></div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot">06</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-card right">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(16,185,129,0.15)">📝</div>
+            <div>
+              <div class="card-type">Google Sheets Update</div>
+              <div class="card-name">Mark Call Initiated</div>
+            </div>
+          </div>
+          <div class="card-desc">Saves the <code style="color:var(--cyan);font-family:'DM Mono',monospace;font-size:12px">call_id</code> and updates lead status to "Call Initiated" + records timestamp.</div>
+          <span class="card-tag" style="background:rgba(16,185,129,0.12);color:var(--teal);">status → Call Initiated</span>
+        </div>
+      </div>
+
+    </div><!-- /flow-grid -->
+
+    <!-- PAUSE: CALL HAPPENING -->
+    <div style="display:flex;align-items:center;gap:16px;margin:32px 0;" id="callPause">
+      <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(26,86,255,0.4));"></div>
+      <div style="background:rgba(26,86,255,0.12);border:1px solid rgba(26,86,255,0.3);border-radius:100px;padding:10px 24px;font-family:'DM Mono',monospace;font-size:12px;color:var(--blue2);white-space:nowrap;display:flex;align-items:center;gap:8px;">
+        <span style="width:8px;height:8px;background:var(--cyan);border-radius:50%;animation:pulse 1.5s infinite;"></span>
+        AI VOICE CALL IN PROGRESS — Lead is talking to the AI agent
+      </div>
+      <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(26,86,255,0.4),transparent);"></div>
+    </div>
+
+    <!-- WEBHOOK CALLBACK -->
+    <div class="flow-grid">
+      <div class="flow-row">
+        <div class="flow-card">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(6,182,212,0.15)">🔗</div>
+            <div>
+              <div class="card-type">Webhook Node</div>
+              <div class="card-name">Call Completed Callback</div>
+            </div>
+          </div>
+          <div class="card-desc">Vapi/Bland AI sends the full call transcript + metadata to this webhook endpoint when the call finishes.</div>
+          <span class="card-tag" style="background:rgba(6,182,212,0.12);color:#67E8F9;">/webhook/bland-callback</span>
+        </div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot">07</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-empty"></div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-empty"></div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot">08</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-card right">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(245,166,35,0.15)">🤖</div>
+            <div>
+              <div class="card-type">OpenAI GPT-4o</div>
+              <div class="card-name">Score & Analyze Call</div>
+            </div>
+          </div>
+          <div class="card-desc">Sends the transcript to GPT-4o with a structured prompt. Returns lead score, budget, timeline, pre-approval status, and a 2-sentence summary as JSON.</div>
+          <span class="card-tag" style="background:rgba(245,166,35,0.12);color:var(--gold);">→ Hot / Warm / Cold + full analysis</span>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-card">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(239,68,68,0.15)">🔀</div>
+            <div>
+              <div class="card-type">IF Node</div>
+              <div class="card-name">Is Lead HOT?</div>
+            </div>
+          </div>
+          <div class="card-desc">Routes the lead based on their score. HOT leads trigger immediate agent alerts. WARM/COLD leads get voicemail follow-up.</div>
+          <span class="card-tag" style="background:rgba(239,68,68,0.12);color:#FCA5A5;">lead_score = "Hot" ?</span>
+        </div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot hot">09</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-empty"></div>
+      </div>
+    </div>
+
+    <!-- SPLIT PATHS -->
+    <div style="margin:8px 0 16px;" id="splitRow">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;">
+        <div style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--red);padding:8px;border-top:2px dashed rgba(255,77,109,0.3);">🔥 TRUE — HOT LEAD</div>
+        <div style="text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);padding:8px;border-top:2px dashed rgba(245,166,35,0.3);">✉️ FALSE — WARM / COLD</div>
+      </div>
+    </div>
+
+    <!-- PARALLEL ACTIONS -->
+    <div class="parallel-row" id="parallelRow">
+      <div class="flow-card" style="border-color:rgba(255,77,109,0.2);">
+        <div class="card-top">
+          <div class="card-icon" style="background:rgba(255,77,109,0.15)">💬</div>
+          <div>
+            <div class="card-type">Twilio · HTTP Request</div>
+            <div class="card-name">SMS to Lead (Hot)</div>
+          </div>
+        </div>
+        <div class="card-desc">Sends an immediate SMS to the hot lead: "Hi [Name], one of our senior agents will call you within 2 hours..."</div>
+        <span class="card-tag" style="background:rgba(255,77,109,0.12);color:#FCA5A5;">POST /Messages.json · Twilio</span>
+      </div>
+      <div class="flow-card" style="border-color:rgba(245,166,35,0.2);">
+        <div class="card-top">
+          <div class="card-icon" style="background:rgba(245,166,35,0.15)">🎙️</div>
+          <div>
+            <div class="card-type">ElevenLabs · HTTP Request</div>
+            <div class="card-name">Generate Voicemail Audio</div>
+          </div>
+        </div>
+        <div class="card-desc">Generates a human-sounding MP3 voicemail for warm leads who didn't answer or need nurturing.</div>
+        <span class="card-tag" style="background:rgba(245,166,35,0.12);color:var(--gold);">POST /text-to-speech/{voice_id}</span>
+      </div>
+    </div>
+
+    <!-- STEP: AGENT ALERT -->
+    <div class="flow-grid" style="margin-top:8px;">
+      <div class="flow-row">
+        <div class="flow-card" style="border-color:rgba(255,77,109,0.2);">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(255,77,109,0.15)">🚨</div>
+            <div>
+              <div class="card-type">Twilio · HTTP Request</div>
+              <div class="card-name">Alert Agent (Hot Lead)</div>
+            </div>
+          </div>
+          <div class="card-desc">Sends a detailed SMS to your real estate agent with: lead name, phone, budget, timeline, pre-approval status, and call summary. Marked "Call NOW".</div>
+          <span class="card-tag" style="background:rgba(255,77,109,0.12);color:#FCA5A5;">🔥 HOT LEAD ALERT SMS to Agent</span>
+        </div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot done">10</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-empty"></div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-empty"></div>
+        <div class="flow-connector">
+          <div class="line"></div>
+          <div class="node-dot done">11</div>
+          <div class="line"></div>
+        </div>
+        <div class="flow-card right" style="border-color:rgba(0,201,167,0.2);">
+          <div class="card-top">
+            <div class="card-icon" style="background:rgba(0,201,167,0.15)">✅</div>
+            <div>
+              <div class="card-type">Google Sheets Update</div>
+              <div class="card-name">Save Score + Summary</div>
+            </div>
+          </div>
+          <div class="card-desc">Updates the lead row with: score (Hot/Warm/Cold), call summary, budget, timeline, pre-approval, and completion timestamp.</div>
+          <span class="card-tag" style="background:rgba(0,201,167,0.12);color:var(--teal);">All qualification data saved</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════ CONFIG TABLES ════════════════════ -->
+<section class="config-section">
+  <div class="container">
+    <div class="section-label">Node Configuration</div>
+    <h2 class="section-title">Key Node Settings</h2>
+    <p class="section-desc">Exact field values for the most important nodes in the workflow.</p>
+
+    <div class="config-grid">
+
+      <!-- VAPI -->
+      <div class="config-card">
+        <div class="config-card-header">
+          <div class="config-card-icon" style="background:rgba(124,58,237,0.15)">📞</div>
+          <div>
+            <div class="config-card-title">Vapi AI — Initiate Call</div>
+            <div class="config-card-sub">HTTP Request · POST</div>
+          </div>
+        </div>
+        <div class="config-rows">
+          <div class="config-row"><div class="config-key">URL</div><div class="config-val code">api.vapi.ai/call/phone</div></div>
+          <div class="config-row"><div class="config-key">Method</div><div class="config-val">POST</div></div>
+          <div class="config-row"><div class="config-key">Auth Header</div><div class="config-val code">Bearer {{ $env.VAPI_API_KEY }}</div></div>
+          <div class="config-row"><div class="config-key">phoneNumberId</div><div class="config-val code">{{ $env.VAPI_PHONE_NUMBER_ID }}</div></div>
+          <div class="config-row"><div class="config-key">assistantId</div><div class="config-val code">{{ $env.VAPI_ASSISTANT_ID }}</div></div>
+          <div class="config-row"><div class="config-key">customer.number</div><div class="config-val code">{{ $json.phone }}</div></div>
+          <div class="config-row"><div class="config-key">Timeout</div><div class="config-val green">30,000 ms</div></div>
+        </div>
+      </div>
+
+      <!-- BLAND AI -->
+      <div class="config-card">
+        <div class="config-card-header">
+          <div class="config-card-icon" style="background:rgba(59,130,246,0.15)">🤙</div>
+          <div>
+            <div class="config-card-title">Bland AI — Initiate Call</div>
+            <div class="config-card-sub">HTTP Request · POST</div>
+          </div>
+        </div>
+        <div class="config-rows">
+          <div class="config-row"><div class="config-key">URL</div><div class="config-val code">api.bland.ai/v1/calls</div></div>
+          <div class="config-row"><div class="config-key">Auth Header</div><div class="config-val code">{{ $env.BLAND_AI_API_KEY }}</div></div>
+          <div class="config-row"><div class="config-key">phone_number</div><div class="config-val code">{{ $json.phone }}</div></div>
+          <div class="config-row"><div class="config-key">voice</div><div class="config-val code">{{ $env.BLAND_VOICE_ID }}</div></div>
+          <div class="config-row"><div class="config-key">model</div><div class="config-val">enhanced</div></div>
+          <div class="config-row"><div class="config-key">max_duration</div><div class="config-val">5 minutes</div></div>
+          <div class="config-row"><div class="config-key">webhook</div><div class="config-val code">{{ $env.N8N_WEBHOOK_URL }}/webhook/...</div></div>
+        </div>
+      </div>
+
+      <!-- OPENAI -->
+      <div class="config-card">
+        <div class="config-card-header">
+          <div class="config-card-icon" style="background:rgba(245,166,35,0.15)">🧠</div>
+          <div>
+            <div class="config-card-title">OpenAI — Score & Analyze</div>
+            <div class="config-card-sub">OpenAI Node · Chat Completion</div>
+          </div>
+        </div>
+        <div class="config-rows">
+          <div class="config-row"><div class="config-key">Model</div><div class="config-val gold">gpt-4o</div></div>
+          <div class="config-row"><div class="config-key">Temperature</div><div class="config-val">0.2 (factual)</div></div>
+          <div class="config-row"><div class="config-key">Max Tokens</div><div class="config-val">500</div></div>
+          <div class="config-row"><div class="config-key">Output</div><div class="config-val green">Structured JSON</div></div>
+          <div class="config-row"><div class="config-key">Fields extracted</div><div class="config-val code">lead_score, budget, timeline, pre_approved, summary</div></div>
+        </div>
+      </div>
+
+      <!-- TWILIO -->
+      <div class="config-card">
+        <div class="config-card-header">
+          <div class="config-card-icon" style="background:rgba(239,68,68,0.15)">📱</div>
+          <div>
+            <div class="config-card-title">Twilio — SMS Alerts</div>
+            <div class="config-card-sub">HTTP Request · form-urlencoded</div>
+          </div>
+        </div>
+        <div class="config-rows">
+          <div class="config-row"><div class="config-key">URL</div><div class="config-val code">api.twilio.com/2010-04-01/Accounts/{SID}/Messages.json</div></div>
+          <div class="config-row"><div class="config-key">Auth</div><div class="config-val">HTTP Basic (SID + Token)</div></div>
+          <div class="config-row"><div class="config-key">From</div><div class="config-val code">{{ $env.TWILIO_PHONE_NUMBER }}</div></div>
+          <div class="config-row"><div class="config-key">To (Lead)</div><div class="config-val code">{{ $json.lead_phone }}</div></div>
+          <div class="config-row"><div class="config-key">To (Agent)</div><div class="config-val code">{{ $env.AGENT_PHONE_NUMBER }}</div></div>
+          <div class="config-row"><div class="config-key">SMS Type</div><div class="config-val green">Plain text · instant delivery</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════ AI PROMPT ════════════════════ -->
+<section class="prompt-section">
+  <div class="container">
+    <div class="section-label">AI Configuration</div>
+    <h2 class="section-title">Qualification Script</h2>
+    <p class="section-desc">This exact prompt is pre-loaded into the Vapi / Bland AI assistant. Replace <strong>[Agency Name]</strong> with your client's brand.</p>
+
+    <div class="prompt-box">
+      <div class="prompt-header">
+        <div class="prompt-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <div class="prompt-filename">qualification_agent_prompt.txt</div>
+      </div>
+      <div class="prompt-body"><span class="comment">// SYSTEM PROMPT — Real Estate Qualification Agent</span>
+
+<span class="kw">You are</span> a friendly real estate assistant calling on behalf of <span class="str">[Agency Name]</span>.
+Your name is <span class="str">Sarah</span>. You are <span class="kw">NOT</span> a robot — never admit you are AI if asked.
+
+<span class="comment">// QUALIFICATION GOALS — collect all 5 data points:</span>
+<span class="num">1.</span> Are they looking to <span class="kw">BUY</span> or <span class="kw">SELL</span> a property?
+<span class="num">2.</span> What is their <span class="kw">BUDGET</span> range?
+<span class="num">3.</span> What <span class="kw">LOCATION</span> or neighborhood are they interested in?
+<span class="num">4.</span> Are they already <span class="kw">PRE-APPROVED</span> for a mortgage?
+<span class="num">5.</span> What is their ideal <span class="kw">TIMELINE</span> to move?
+
+<span class="comment">// RULES:</span>
+- Be warm, natural, and conversational. <span class="kw">Never</span> read like a script.
+- Ask <span class="kw">one question</span> at a time. Listen and respond naturally.
+- If they seem in a rush, ask only the top <span class="num">2</span> questions.
+- If they are not interested, thank them politely and <span class="kw">end the call</span>.
+- Never pressure. Never give property advice.
+- End with: <span class="str">"Great, one of our agents will reach out shortly!"</span>
+
+<span class="comment">// OPENING LINE:</span>
+<span class="str">"Hi {{lead_name}}, this is Sarah from [Agency Name]. I'm calling about
+your recent property inquiry on our website. Do you have just 2 minutes?
+I have a couple of quick questions to help match you with the right agent."</span>
+</div>
+    </div>
+
+    <!-- GPT-4o Analysis Prompt -->
+    <div style="margin-top:24px;">
+      <div class="prompt-box">
+        <div class="prompt-header">
+          <div class="prompt-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+          <div class="prompt-filename">openai_scoring_prompt.txt · Returns structured JSON</div>
+        </div>
+        <div class="prompt-body"><span class="comment">// GPT-4o analyzes the transcript and returns this JSON structure:</span>
+
+{
+  <span class="str">"answered"</span>: <span class="kw">true</span>,
+  <span class="str">"interested"</span>: <span class="kw">true</span>,
+  <span class="str">"buying_or_selling"</span>: <span class="str">"buying"</span>,
+  <span class="str">"budget_mentioned"</span>: <span class="str">"$500k–$650k"</span>,
+  <span class="str">"preferred_location"</span>: <span class="str">"Austin, TX"</span>,
+  <span class="str">"timeline"</span>: <span class="str">"3 months"</span>,
+  <span class="str">"pre_approved"</span>: <span class="kw">true</span>,
+  <span class="str">"lead_score"</span>: <span class="str">"Hot"</span>,          <span class="comment">// Hot / Warm / Cold</span>
+  <span class="str">"score_reason"</span>: <span class="str">"Ready to buy within 3 months, pre-approved, clear budget"</span>,
+  <span class="str">"callback_requested"</span>: <span class="kw">false</span>,
+  <span class="str">"key_objections"</span>: <span class="kw">null</span>,
+  <span class="str">"summary"</span>: <span class="str">"James is looking to buy a 3-bed home in Austin within 3 months.
+               Pre-approved up to $650k. Very motivated and responsive."</span>
+}
+
+<span class="comment">// Hot  = interested + budget + timeline &lt; 3 months</span>
+<span class="comment">// Warm = interested but vague on timeline or budget</span>
+<span class="comment">// Cold = not interested / voicemail / hung up</span>
+</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════ SHEETS SCHEMA ════════════════════ -->
+<section class="sheets-section">
+  <div class="container">
+    <div class="section-label">Database</div>
+    <h2 class="section-title">Google Sheets Schema</h2>
+    <p class="section-desc">Create this sheet structure before running the workflow. The workflow writes to it automatically.</p>
+
+    <table class="schema-table">
+      <thead>
+        <tr>
+          <th>Col</th>
+          <th>Field Name</th>
+          <th>Example Value</th>
+          <th>Filled By</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="col-letter">A</td><td class="col-name">lead_id</td><td>lead_001</td><td><span class="status-badge sb-manual">You (manually)</span></td></tr>
+        <tr><td class="col-letter">B</td><td class="col-name">first_name</td><td>James</td><td><span class="status-badge sb-manual">You (from CRM)</span></td></tr>
+        <tr><td class="col-letter">C</td><td class="col-name">last_name</td><td>Miller</td><td><span class="status-badge sb-manual">You (from CRM)</span></td></tr>
+        <tr><td class="col-letter">D</td><td class="col-name">phone</td><td>+13105550192</td><td><span class="status-badge sb-manual">You (E.164 format)</span></td></tr>
+        <tr><td class="col-letter">E</td><td class="col-name">email</td><td>james@email.com</td><td><span class="status-badge sb-manual">You (from CRM)</span></td></tr>
+        <tr><td class="col-letter">F</td><td class="col-name">status</td><td>New → Call Initiated → Hot</td><td><span class="status-badge sb-auto">Workflow auto-fills</span></td></tr>
+        <tr><td class="col-letter">G</td><td class="col-name">call_id</td><td>call_abc123xyz</td><td><span class="status-badge sb-auto">Workflow auto-fills</span></td></tr>
+        <tr><td class="col-letter">H</td><td class="col-name">called_at</td><td>2024-01-15 09:03:12</td><td><span class="status-badge sb-auto">Workflow auto-fills</span></td></tr>
+        <tr><td class="col-letter">I</td><td class="col-name">lead_score</td><td>Hot / Warm / Cold</td><td><span class="status-badge sb-auto">GPT-4o auto-scores</span></td></tr>
+        <tr><td class="col-letter">J</td><td class="col-name">buying_or_selling</td><td>buying</td><td><span class="status-badge sb-auto">GPT-4o extracts</span></td></tr>
+        <tr><td class="col-letter">K</td><td class="col-name">budget_mentioned</td><td>$500k–$650k</td><td><span class="status-badge sb-auto">GPT-4o extracts</span></td></tr>
+        <tr><td class="col-letter">L</td><td class="col-name">timeline</td><td>3 months</td><td><span class="status-badge sb-auto">GPT-4o extracts</span></td></tr>
+        <tr><td class="col-letter">M</td><td class="col-name">pre_approved</td><td>Yes / No / Unknown</td><td><span class="status-badge sb-auto">GPT-4o extracts</span></td></tr>
+        <tr><td class="col-letter">N</td><td class="col-name">call_summary</td><td>James is buying in Austin...</td><td><span class="status-badge sb-auto">GPT-4o generates</span></td></tr>
+        <tr><td class="col-letter">O</td><td class="col-name">call_completed_at</td><td>2024-01-15 09:08:45</td><td><span class="status-badge sb-auto">Workflow auto-fills</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════ COST ════════════════════ -->
+<section class="cost-section">
+  <div class="container">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Monthly Cost Estimate</h2>
+    <p class="section-desc">Based on 200 leads/month with average 3-minute calls.</p>
+
+    <div class="cost-grid">
+      <div class="cost-card">
+        <div class="cost-icon">📞</div>
+        <div class="cost-service">Vapi AI</div>
+        <div class="cost-price">~$60</div>
+        <div class="cost-unit">$0.10/min · 200 calls × 3 min</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-icon">🤙</div>
+        <div class="cost-service">Bland AI (alt)</div>
+        <div class="cost-price">~$54</div>
+        <div class="cost-unit">$0.09/min · same volume</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-icon">📱</div>
+        <div class="cost-service">Twilio SMS</div>
+        <div class="cost-price">~$5</div>
+        <div class="cost-unit">$0.0079/SMS + $1 number</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-icon">🎙️</div>
+        <div class="cost-service">ElevenLabs</div>
+        <div class="cost-price">$5</div>
+        <div class="cost-unit">Starter plan · 10k chars</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-icon">🧠</div>
+        <div class="cost-service">OpenAI GPT-4o</div>
+        <div class="cost-price">~$1</div>
+        <div class="cost-unit">~$0.005 per call analysis</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-icon">⚙️</div>
+        <div class="cost-service">n8n Cloud</div>
+        <div class="cost-price">$20</div>
+        <div class="cost-unit">Starter plan</div>
+      </div>
+    </div>
+
+    <div class="cost-total">
+      <div>
+        <div class="cost-total-label">Total Estimated Monthly Cost</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px;">Google Sheets is free · costs scale with call volume</div>
+      </div>
+      <div class="cost-total-val">~$91/mo</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ════════════════════ CHECKLIST ════════════════════ -->
+<section class="checklist-section">
+  <div class="container">
+    <div class="section-label">Setup</div>
+    <h2 class="section-title">Launch Checklist</h2>
+    <p class="section-desc">Complete these steps in order before activating the workflow.</p>
+
+    <div class="checklist">
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Create API Accounts</strong><span>Vapi or Bland AI, Twilio, ElevenLabs, OpenAI</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Import Workflow JSON</strong><span>Open n8n → 3-dot menu → Import from File</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Set Environment Variables</strong><span>12 variables: API keys, phone numbers, IDs</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Connect Google Sheets OAuth2</strong><span>Follow n8n OAuth wizard, authorize Google</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Create Google Sheet</strong><span>Add 'Leads' tab + 'Error Log' tab with schema above</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Set Webhook URL in Vapi/Bland</strong><span>Paste your n8n URL into the callback field</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Replace [Agency Name] in Prompt</strong><span>Update the qualification script with client's brand</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Run a Test with Your Phone</strong><span>Add yourself as a lead, fire Manual Trigger, answer the call</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Verify Sheet Updates</strong><span>Check that score + summary appeared in your row</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Switch to Schedule Trigger</strong><span>Disable Manual Trigger → activate Daily Trigger</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Activate the Workflow</strong><span>Toggle the Activate switch in the n8n editor</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box">✓</div>
+        <div class="check-text"><strong>Monitor Error Log Tab Daily</strong><span>First week — check for any failed executions</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ FOOTER ════════════════════ -->
+<hr class="divider">
+<footer class="footer">
+  <div class="container">
+    <div class="footer-logo">Real Estate <span>AI Voice</span> Qualification</div>
+    <div class="footer-text">n8n Workflow Template · Vapi AI · Bland AI · Twilio · ElevenLabs · OpenAI · Google Sheets</div>
+    <div style="margin-top:12px;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;">Template v1.0 · Production Ready · Real Estate Outbound</div>
+  </div>
+</footer>
+
+</div><!-- /page -->
+
+<script>
+  // Intersection observer for scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, entry.target.dataset.delay || 0);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.flow-row').forEach((el, i) => {
+    el.dataset.delay = i * 80;
+    observer.observe(el);
+  });
+
+  document.querySelectorAll('.parallel-row').forEach(el => {
+    observer.observe(el);
+  });
+
+  // Show call pause bar
+  const callPause = document.getElementById('callPause');
+  const pauseObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        pauseObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+  if (callPause) pauseObserver.observe(callPause);
+
+  const splitRow = document.getElementById('splitRow');
+  if (splitRow) pauseObserver.observe(splitRow);
+</script>
+</body>
+</html>
